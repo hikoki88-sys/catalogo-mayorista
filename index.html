@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Generador de Catálogo Mayorista</title>
+
+<style>
+body{font-family:Arial, sans-serif;background:#f5f5f5;padding:20px}
+h1{text-align:center}
+.card{background:#fff;padding:15px;border-radius:8px;max-width:540px;margin:0 auto}
+label{display:block;margin-top:10px;font-weight:bold}
+input{width:100%;padding:8px;margin-top:5px}
+button{margin-top:12px;width:100%;padding:12px;font-size:15px;border-radius:6px;border:none;cursor:pointer}
+.producto{border:1px solid #ddd;padding:10px;border-radius:6px;margin-top:15px}
+.btn-pdf{background:#111;color:#fff}
+.btn-wsp{background:#25D366;color:#fff}
+.small{font-size:12px;color:#666;margin-top:8px}
+</style>
+</head>
+
+<body>
+<h1>Catálogo Mayorista</h1>
+
+<div class="card">
+
+  <!-- Logo opcional (puedes eliminar este bloque si NO quieres marca) -->
+  <label>📷 Logo del negocio (opcional)</label>
+  <input type="file" id="logoInput" accept="image/*" />
+
+  <label>📱 Número WhatsApp (+51...)</label>
+  <input type="text" id="wspNumero" placeholder="Ej: 51987654321" />
+
+  <label>💬 Mensaje de WhatsApp</label>
+  <input type="text" id="wspMensaje" value="Hola, te envío mi catálogo mayorista. Avísame cualquier consulta." />
+
+  <div id="productos"></div>
+
+  <button onclick="agregarProducto()">➕ Agregar Zapatilla</button>
+  <button class="btn-pdf" onclick="generarPDF()">📄 Generar PDF</button>
+  <button class="btn-wsp" onclick="enviarWhatsApp()">🟢 Enviar por WhatsApp</button>
+
+  <div class="small">* Funciona offline si descargas este archivo y lo abres en tu celular o PC.</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+let productos = [];
+let logoData = null;
+
+document.getElementById("logoInput").addEventListener("change", e => {
+  if(!e.target.files[0]) return;
+  const r = new FileReader();
+  r.onload = () => logoData = r.result;
+  r.readAsDataURL(e.target.files[0]);
+});
+
+function agregarProducto(){
+  const i = productos.length;
+  productos.push({});
+
+  const d = document.createElement("div");
+  d.className = "producto";
+  d.innerHTML = `
+    <label>Foto</label>
+    <input type="file" accept="image/*" onchange="productos[${i}].foto=this.files[0]" />
+
+    <label>Precio</label>
+    <input placeholder="S/ 399" onchange="productos[${i}].precio=this.value" />
+
+    <label>Calidad</label>
+    <input placeholder="PK / LJR" onchange="productos[${i}].calidad=this.value" />
+
+    <label>Tallas</label>
+    <input placeholder="38-44" onchange="productos[${i}].tallas=this.value" />
+  `;
+  document.getElementById("productos").appendChild(d);
+}
+
+function leerImagen(file){
+  return new Promise(res => {
+    const img = new Image();
+    const r = new FileReader();
+    r.onload = e => {
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        const maxW = 800;
+        const scale = maxW / img.width;
+        c.width = maxW;
+        c.height = img.height * scale;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL("image/jpeg", 0.6));
+      };
+      img.src = e.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+async function generarPDF(){
+  if(productos.length === 0){ alert("Agrega productos"); return; }
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF("p", "mm", "a4");
+
+  for(let i = 0; i < productos.length; i++){
+    const p = productos[i];
+    if(!p.foto) continue;
+
+    const img = await leerImagen(p.foto);
+
+    if(i > 0) pdf.addPage(); // 1 zapatilla por página
+
+    pdf.addImage(img, "JPEG", 15, 20, 180, 80);
+    pdf.setFontSize(14);
+    pdf.text(`Precio: ${p.precio || ''}`, 20, 115);
+    pdf.text(`Calidad: ${p.calidad || ''}`, 20, 130);
+    pdf.text(`Tallas: ${p.tallas || ''}`, 20, 145);
+
+    if(logoData){
+      pdf.addImage(logoData, "JPEG", 150, 270, 40, 15);
+    }
+  }
+
+  pdf.save("catalogo_mayorista.pdf");
+}
+
+function enviarWhatsApp(){
+  const num = document.getElementById("wspNumero").value.trim();
+  if(!num){ alert("Ingresa un número de WhatsApp"); return; }
+  const msg = document.getElementById("wspMensaje").value;
+  const url = `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  window.open(url, "_blank");
+}
+
+agregarProducto();
+</script>
+</body>
+</html>
