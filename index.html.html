@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de Catálogo PDF Mayorista</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f5f5; padding:20px; }
+    h1 { text-align:center; }
+    .card { background:#fff; padding:15px; border-radius:8px; max-width:480px; margin:0 auto 20px; }
+    label { display:block; margin-top:10px; font-weight:bold; }
+    input { width:100%; padding:8px; margin-top:5px; }
+    button { margin-top:12px; width:100%; padding:10px; font-size:15px; cursor:pointer; }
+    .producto { border:1px solid #ddd; padding:10px; border-radius:6px; margin-top:15px; }
+  </style>
+</head>
+<body>
+
+<h1>Catálogo PDF Mayorista (Sin Marca)</h1>
+
+<div class="card">
+  <div id="productos"></div>
+
+  <button onclick="agregarProducto()">➕ Agregar Zapatilla</button>
+  <button onclick="generarPDF()">📄 Generar PDF</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+let productos = [];
+
+function agregarProducto() {
+  const index = productos.length;
+  productos.push({});
+
+  const div = document.createElement('div');
+  div.className = 'producto';
+  div.innerHTML = `
+    <label>Foto de la zapatilla</label>
+    <input type="file" accept="image/*" onchange="productos[${index}].foto = event.target.files[0]" />
+
+    <label>Precio</label>
+    <input type="text" placeholder="Ej: S/. 369" onchange="productos[${index}].precio = this.value" />
+
+    <label>Calidad</label>
+    <input type="text" placeholder="PK / LJR" onchange="productos[${index}].calidad = this.value" />
+
+    <label>Tallas</label>
+    <input type="text" placeholder="40 - 41 - 42 - 43" onchange="productos[${index}].tallas = this.value" />
+  `;
+  document.getElementById('productos').appendChild(div);
+}
+
+async function generarPDF() {
+  if (productos.length === 0) { alert('Agrega al menos una zapatilla'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','mm','a4');
+
+  for (let i = 0; i < productos.length; i++) {
+    const p = productos[i];
+    if (!p.foto) continue;
+
+    const imgData = await leerImagen(p.foto);
+    if (i > 0) pdf.addPage();
+
+    pdf.addImage(imgData, 'JPEG', 15, 20, 180, 120);
+    pdf.setFontSize(16);
+    pdf.text('Precio: ' + (p.precio || ''), 20, 155);
+    pdf.text('Calidad: ' + (p.calidad || ''), 20, 170);
+    pdf.text('Tallas: ' + (p.tallas || ''), 20, 185);
+  }
+
+  pdf.save('catalogo_mayorista.pdf');
+}
+
+function leerImagen(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+// agregar primer producto automáticamente
+agregarProducto();
+</script>
+
+</body>
+</html>
