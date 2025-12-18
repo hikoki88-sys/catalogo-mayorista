@@ -23,6 +23,7 @@
 
   <button onclick="agregarProducto()">➕ Agregar Zapatilla</button>
   <button onclick="generarPDF()">📄 Generar PDF</button>
+  <button onclick="enviarWhatsApp()">🟢 Enviar por WhatsApp</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -61,7 +62,36 @@ async function generarPDF() {
     const p = productos[i];
     if (!p.foto) continue;
 
-    const imgData = await leerImagen(p.foto);
+    <script>
+function leerImagen(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = e => {
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+
+        const MAX_WIDTH = 1000; // ideal para WhatsApp
+        const scale = MAX_WIDTH / img.width;
+
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scale;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // compresión JPEG (0.65 = buena calidad + liviano)
+        const compressed = canvas.toDataURL("image/jpeg", 0.65);
+        resolve(compressed);
+      };
+      img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+</script>
     if (i > 0) pdf.addPage();
 
     pdf.addImage(imgData, 'JPEG', 15, 20, 180, 120);
